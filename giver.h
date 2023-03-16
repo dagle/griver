@@ -1,5 +1,5 @@
-#ifndef __GIVERTILE_H__
-#define __GIVERTILE_H__
+#ifndef __GIVER_CONTEXT_H__
+#define __GIVER_CONTEXT_H__
 
 #include <glib-object.h>
 
@@ -8,7 +8,6 @@ G_BEGIN_DECLS
 #define GIVER_TYPE_CONTEXT (g_river_get_type())
 
 G_DECLARE_DERIVABLE_TYPE(GiverContext, g_river, GIVER, CONTEXT, GObject)
-// G_DECLARE_FINAL_TYPE(GiverContext, g_river, GIVER, CONTEXT, GObject)
 
 struct _GiverContextClass {
 	void (*run) (GiverContext *self, GError **err);
@@ -17,8 +16,8 @@ struct _GiverContextClass {
 
 void g_river_run(GiverContext *self, GError **err);
 
-GObject *g_river_new(void);
+GObject *g_river_new(const char *str);
 
 G_END_DECLS
 
-#endif /* __GIVERTILE_H__ */
+#endif /* __GIVER_CONTEXT_H__ */

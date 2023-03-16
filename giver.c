@@ -17,11 +17,13 @@
 // [ ] Fix signals (add output object / name)
 
 typedef struct {
+	const char *namespace;
 	int intialized;
 	int loop;
 	int exitcode;
+
 	GError *error;
-	GList *outputs;
+	GList *outputs; // List of Outputs
 } GiverContextPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (GiverContext, g_river, G_TYPE_OBJECT)
@@ -30,6 +32,7 @@ static void run(GiverContext *self, GError **err);
 static bool init_wayland (GiverContext *self);
 static void finish_wayland (GiverContext *self);
 
+// move this to the private context
 struct wl_registry *wl_registry;
 struct wl_callback *sync_callback;
 struct river_layout_manager_v3 *layout_manager;
@@ -108,8 +111,10 @@ static void layout_handle_layout_demand (void *data, struct river_layout_v3 *riv
 
 	struct Output *output = (struct Output *)data;
 
-	g_signal_emit (output->ctx, giver_signals[LAYOUT_DEMAND], 0, view_count, width, height, serial);
+	g_signal_emit (output->ctx, giver_signals[LAYOUT_DEMAND], 0, river_layout_v3,
+			view_count, width, height, tags, serial);
 }
+
 static void layout_handle_user_command (void *data, struct river_layout_v3 *river_layout_manager_v3,
 		const char *command) {
 	struct Output *output = (struct Output *)data;
@@ -135,7 +140,7 @@ static void configure_output (struct Output *output, GiverContextPrivate *priv)
 {
 	if (priv->intialized) {
 		output->layout = river_layout_manager_v3_get_layout(layout_manager,
-				output->output, "griver");
+				output->output, priv->namespace);
 		river_layout_v3_add_listener(output->layout, &layout_listener, output);
 	}
 }
@@ -234,6 +239,7 @@ static void registry_handle_global (void *data, struct wl_registry *registry,
 	{
 		struct wl_output *wl_output = wl_registry_bind(registry, name,
 				&wl_output_interface, 3);
+
 		if (!create_output(self, wl_output, name))
 		{
 			priv->loop = false;
@@ -378,8 +384,8 @@ static void finish_wayland (GiverContext *self)
 	}
 
 	destroy_all_outputs(self);
-	// if ( sync_callback != NULL )
-	// 	wl_callback_destroy(sync_callback);
+	if ( sync_callback != NULL )
+		wl_callback_destroy(sync_callback);
 
 	if ( layout_manager != NULL ) {
 		river_layout_manager_v3_destroy(layout_manager);
@@ -423,6 +429,10 @@ static void g_river_init(GiverContext *ctx) {
  *
  * Returns: (transfer full): a new river context object.
  **/
-GObject *g_river_new(){
-	return g_object_new(GIVER_TYPE_CONTEXT, NULL);
+GObject *g_river_new(const char *namespace){
+	GiverContext *ctx = g_object_new(GIVER_TYPE_CONTEXT, NULL);
+	GiverContextPrivate *priv = g_river_get_instance_private(ctx);
+	
+	priv->namespace = namespace;
+	return (GObject *)ctx;
 }
