@@ -264,24 +264,24 @@ void g_river_output_tall_layout(GriverOutput *out, uint32_t view_count, uint32_t
 
 	uint32_t usable_width;
 	switch (rotation) {
-		case LEFT:
-		case RIGHT:
+		case GRIVER_LEFT:
+		case GRIVER_RIGHT:
 			usable_width = width - 2 * outer_padding;
 			break;
-		case TOP:
-		case BOT:
+		case GRIVER_TOP:
+		case GRIVER_BOT:
 			usable_width = height - 2 * outer_padding;
 			break;
 	}
 
 	uint32_t usable_height;
 	switch (rotation) {
-		case LEFT:
-		case RIGHT:
+		case GRIVER_LEFT:
+		case GRIVER_RIGHT:
 			usable_height = height - 2 * outer_padding;
 			break;
-		case TOP:
-		case BOT:
+		case GRIVER_TOP:
+		case GRIVER_BOT:
 			usable_height = width - 2 * outer_padding;
 			break;
 	}
@@ -336,7 +336,7 @@ void g_river_output_tall_layout(GriverOutput *out, uint32_t view_count, uint32_t
 	        lheight -= 2 * view_padding;
 
 			switch (rotation) {
-				case LEFT:
+				case GRIVER_LEFT:
 					g_river_output_push_view_dimensions(out,
 							x + outer_padding,
 							y + outer_padding,
@@ -345,7 +345,7 @@ void g_river_output_tall_layout(GriverOutput *out, uint32_t view_count, uint32_t
 							serial
 							);
 					break;
-				case RIGHT:
+				case GRIVER_RIGHT:
 					g_river_output_push_view_dimensions(out,
 							width - lwidth - x + outer_padding,
 							y + outer_padding,
@@ -354,7 +354,7 @@ void g_river_output_tall_layout(GriverOutput *out, uint32_t view_count, uint32_t
 							serial
 							);
 					break;
-				case TOP:
+				case GRIVER_TOP:
 					g_river_output_push_view_dimensions(out,
 							y + outer_padding,
 							x + outer_padding,
@@ -363,7 +363,7 @@ void g_river_output_tall_layout(GriverOutput *out, uint32_t view_count, uint32_t
 							serial
 							);
 					break;
-				case BOT:
+				case GRIVER_BOT:
 					g_river_output_push_view_dimensions(out,
 							y + outer_padding,
 							width - lwidth - x + outer_padding,

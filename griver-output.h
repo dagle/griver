@@ -13,11 +13,20 @@ G_BEGIN_DECLS
 
 G_DECLARE_DERIVABLE_TYPE(GriverOutput, g_river_output, GRIVER, OUTPUT, GObject);
 
+/**
+ * GriverRotation:
+ * @GRIVER_LEFT: Put the master to the left
+ * @GRIVER_RIGHT: Put the master to the right
+ * @GRIVER_TOP: Put the master to at the top
+ * @GRIVER_BOT: Put the master to at the bot
+ *
+ * A type to represents the orientation of tiling
+ **/
 typedef enum {
-	LEFT,
-	RIGHT,
-	TOP,
-	BOT,
+	GRIVER_LEFT,
+	GRIVER_RIGHT,
+	GRIVER_TOP,
+	GRIVER_BOT,
 } GriverRotation;
 
 struct _GriverOutputClass {
