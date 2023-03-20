@@ -16,12 +16,13 @@ deps = [
 ]
 
 wl_mod = import('unstable-wayland')
-river_layout = wl_mod.scan_xml('river-layout-v3.xml')
-river_status = wl_mod.scan_xml('river-status-unstable-v1.xml')
+river_layout = wl_mod.scan_xml('protocol/river-layout-v3.xml')
+river_status = wl_mod.scan_xml('protocol/river-status-unstable-v1.xml')
+river_control = wl_mod.scan_xml('protocol/river-control-unstable-v1.xml')
 
 install_headers(source_h)
 
-giver = library('griver', source_c, river_layout, river_status, dependencies : deps)
+giver = library('griver', source_c, river_layout, river_status, river_control, dependencies : deps)
 gnome = import('gnome')
 
 gir_args = [

@@ -12,15 +12,10 @@ G_DECLARE_DERIVABLE_TYPE(GriverContext, g_river_context, GRIVER, CONTEXT, GObjec
 struct _GriverContextClass {
 	GObjectClass parent_class;
 
-	void (*run) (GriverContext *self, GError **err);
-	// void (*push_view_dimensions) (GriverContext *self, 
-	// 		uint32_t view_count, uint32_t width, uint32_t height,
-	// 		uint32_t tags, uint32_t serial);
-	// void (*commit_dimensions) (GriverContext *self, const char *layout_name, uint32_t serial);
-	// gpointer padding[12];
+	void (*run) (GriverContext *ctx, GError **err);
 };
 
-void g_river_context_run(GriverContext *self, GError **err);
+void g_river_context_run(GriverContext *ctx, GError **err);
 
 GObject *g_river_context_new(const char *str);
 

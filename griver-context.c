@@ -12,7 +12,7 @@
 #include "river-status-unstable-v1-client-protocol.h"
 
 typedef struct {
-	const char *namespace;
+	char *namespace;
 	int intialized;
 	int loop;
 	int exitcode;
@@ -23,10 +23,11 @@ typedef struct {
 
 G_DEFINE_TYPE_WITH_PRIVATE (GriverContext, g_river_context, G_TYPE_OBJECT)
 
-static void run (GriverContext *self, GError **err);
+static void run (GriverContext *ctx, GError **err);
 
-static bool init_wayland (GriverContext *self);
-static void finish_wayland (GriverContext *self);
+static bool init_wayland (GriverContext *ctx);
+static void finish_wayland (GriverContext *ctx);
+static void context_finalize(GObject *object);
 
 // TODO: move this to the private context
 struct wl_registry *wl_registry;
@@ -49,7 +50,7 @@ GQuark giver_error_quark;
  *
  * The GMime error domain GQuark value.
  **/
-#define G_RIVER_ERROR gmime_error_quark
+#define GRIVER_ERROR griver_error_quark
 
 /**
  * GMIME_ERROR_IS_SYSTEM:
@@ -71,27 +72,21 @@ enum {
 };
 // create an error quarks and levels for G_RIVER using glib
 
-// change this into a class or shomething or a boxed?
-// Should we have a backpointer to the class?
-// Or how do we get the output from the class?
-typedef struct Output {
-	// should we ref-count this object?
-	GriverContext *ctx;
-	int cmd_tags;
-    bool initialized;
-
-	uint32_t global_name;
-
-	struct wl_output       *output;
-	struct river_layout_v3 *layout;
-} Output;
-
 static void g_river_context_init(GriverContext *ctx) {
 }
 
 static void g_river_context_class_init(GriverContextClass *klass){
-	klass->run = run;
+	GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
+	klass->run = run;
+	gobject_class->finalize = context_finalize;
+
+	/**
+	 * GriverContext::output-add:
+	 * @runtime: The [class@Griver.GriverContext] instance.
+	 * @output: A newly allocated output
+	 *
+	 **/
 	griver_signals[GRIVER_ADD_OUTPUT] = g_signal_new ("output-add",
 			G_TYPE_FROM_CLASS (klass),
 			G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
@@ -100,8 +95,15 @@ static void g_river_context_class_init(GriverContextClass *klass){
 			NULL,
 			NULL,
 			G_TYPE_NONE,
-			0
+			1,
+			GRIVER_TYPE_OUTPUT
 			);
+	/**
+	 * GriverContext::output-remove:
+	 * @runtime: The [class@Griver.GriverContext] instance.
+	 * @output: The output to remove
+	 *
+	 **/
 	griver_signals[GRIVER_REMOVE_OUTPUT] = g_signal_new ("output-remove",
 			G_TYPE_FROM_CLASS (klass),
 			G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
@@ -110,16 +112,17 @@ static void g_river_context_class_init(GriverContextClass *klass){
 			NULL,
 			NULL,
 			G_TYPE_NONE,
-			0
+			1,
+			GRIVER_TYPE_OUTPUT
 			);
 }
 
-GriverOutput *create_output (GriverContext *self, struct wl_output *wl_output, uint32_t global_name)
+GriverOutput *create_output (GriverContext *ctx, struct wl_output *wl_output, uint32_t global_name)
 {
-	GriverContextPrivate *priv = g_river_context_get_instance_private (self);
+	GriverContextPrivate *priv = g_river_context_get_instance_private (ctx);
 
 	GriverOutput *output = GRIVER_OUTPUT(
-		g_river_output_new(layout_manager, wl_output, NULL, global_name, "apa", priv->intialized));
+		g_river_output_new(layout_manager, wl_output, global_name, priv->namespace, priv->intialized));
 	priv->outputs = g_list_append(priv->outputs, output);
 	return output;
 }
@@ -127,7 +130,7 @@ GriverOutput *create_output (GriverContext *self, struct wl_output *wl_output, u
 static void registry_handle_global (void *data, struct wl_registry *registry,
 		uint32_t name, const char *interface, uint32_t version)
 {
-	GriverContext *self = GRIVER_CONTEXT(data);
+	GriverContext *ctx = GRIVER_CONTEXT(data);
 	if ( strcmp(interface, river_layout_manager_v3_interface.name) == 0 )
 		layout_manager = wl_registry_bind(registry, name,
 				&river_layout_manager_v3_interface, 1);
@@ -136,8 +139,8 @@ static void registry_handle_global (void *data, struct wl_registry *registry,
 		struct wl_output *wl_output = wl_registry_bind(registry, name,
 				&wl_output_interface, 3);
 
-		GriverOutput *output = create_output(self, wl_output, name);
-		g_signal_emit (self, griver_signals[GRIVER_ADD_OUTPUT], 0, output);
+		GriverOutput *output = create_output(ctx, wl_output, name);
+		g_signal_emit (ctx, griver_signals[GRIVER_ADD_OUTPUT], 0, output);
 	}
 }
 
@@ -155,11 +158,11 @@ static GriverOutput *output_from_global_name (GriverContextPrivate *priv, uint32
 
 static void registry_handle_global_remove (void *data, struct wl_registry *registry, uint32_t name)
 {
-	GriverContext *self = GRIVER_CONTEXT(data);
-	GriverContextPrivate *priv = g_river_context_get_instance_private (self);
+	GriverContext *ctx = GRIVER_CONTEXT(data);
+	GriverContextPrivate *priv = g_river_context_get_instance_private (ctx);
 	GriverOutput *output = output_from_global_name(priv, name);
 	if ( output != NULL ){
-		g_signal_emit (self, griver_signals[GRIVER_REMOVE_OUTPUT], 0);
+		g_signal_emit (ctx, griver_signals[GRIVER_REMOVE_OUTPUT], 0, output);
 		priv->outputs = g_list_remove(priv->outputs, output);
 		g_object_unref(output);
 	}
@@ -173,8 +176,8 @@ static const struct wl_registry_listener registry_listener = {
 static void sync_handle_done (void *data, struct wl_callback *wl_callback,
 		uint32_t irrelevant)
 {
-	GriverContext *self = GRIVER_CONTEXT(data);
-	GriverContextPrivate *priv = g_river_context_get_instance_private (self);
+	GriverContext *ctx = GRIVER_CONTEXT(data);
+	GriverContextPrivate *priv = g_river_context_get_instance_private (ctx);
 
 	wl_callback_destroy(wl_callback);
 	sync_callback = NULL;
@@ -201,7 +204,7 @@ static void sync_handle_done (void *data, struct wl_callback *wl_callback,
 	GList *list = priv->outputs;
 	while (list) {
 		GriverOutput *output = GRIVER_OUTPUT(list->data);
-		g_river_output_configure(output, layout_manager);
+		g_river_output_configure(output, layout_manager, priv->namespace);
 		list = list->next;
 	}
 }
@@ -211,9 +214,9 @@ static const struct wl_callback_listener sync_callback_listener = {
 	.done = sync_handle_done,
 };
 
-static bool init_wayland (GriverContext *self)
+static bool init_wayland (GriverContext *ctx)
 {
-	GriverContextPrivate *priv = g_river_context_get_instance_private (self);
+	GriverContextPrivate *priv = g_river_context_get_instance_private (ctx);
 	/* We query the display name here instead of letting wl_display_connect()
 	 * figure it out itself, because libwayland (for legacy reasons) falls
 	 * back to using "wayland-0" when $WAYLAND_DISPLAY is not set, which is
@@ -240,7 +243,7 @@ static bool init_wayland (GriverContext *self)
 	priv->outputs = NULL;
 
 	wl_registry = wl_display_get_registry(wl_display);
-	wl_registry_add_listener(wl_registry, &registry_listener, self);
+	wl_registry_add_listener(wl_registry, &registry_listener, ctx);
 	priv->intialized = true;
 
 	sync_callback = wl_display_sync(wl_display);
@@ -249,27 +252,26 @@ static bool init_wayland (GriverContext *self)
 	return true;
 }
 
-static void destroy_all_outputs (GriverContext *self)
+static void destroy_all_outputs (GriverContext *ctx)
 {
-	GriverContextPrivate *priv = g_river_context_get_instance_private (self);
-	// GList *list = priv->outputs;
+	GriverContextPrivate *priv = g_river_context_get_instance_private (ctx);
+	GList *list = priv->outputs;
 	
-	// TODO: something like this
-	g_object_unref(priv->outputs);
-	// while (list) {
-		// GriverOutput *output = GRIVER_OUTPUT(list->data);
-		// destroy_output(priv, output);
-		// list = list->next;
-	// }
+	while (list) {
+		GriverOutput *output = GRIVER_OUTPUT(list->data);
+		g_object_unref(output);
+		list = list->next;
+	}
+	g_list_free(list);
 }
 
-static void finish_wayland (GriverContext *self)
+static void finish_wayland (GriverContext *ctx)
 {  
 	if ( wl_display == NULL ) {
 		return;
 	}
 
-	destroy_all_outputs(self);
+	destroy_all_outputs(ctx);
 	if ( sync_callback != NULL )
 		wl_callback_destroy(sync_callback);
 
@@ -282,9 +284,9 @@ static void finish_wayland (GriverContext *self)
 }
 
 static void 
-run (GriverContext *self, GError **error) {
-	GriverContextPrivate *priv = g_river_context_get_instance_private(self);
-	if (init_wayland(self)) {
+run (GriverContext *ctx, GError **error) {
+	GriverContextPrivate *priv = g_river_context_get_instance_private(ctx);
+	if (init_wayland(ctx)) {
 	}
 
 	priv->exitcode = EXIT_SUCCESS;
@@ -295,9 +297,25 @@ run (GriverContext *self, GError **error) {
 			break;
 		}
 	} 
-	finish_wayland(self);
+	finish_wayland(ctx);
 }
 
+static void context_finalize(GObject *object) {
+	GriverContext *ctx = GRIVER_CONTEXT(object);
+	GriverContextPrivate *priv = g_river_context_get_instance_private(ctx);
+
+	g_free(priv->namespace);
+}
+
+
+/**
+ * g_river_context_run:
+ * @ctx: The context to run
+ * @err: a #GError
+ *
+ * Run the river context, until the compositor stops.
+ *
+ **/
 void 
 g_river_context_run (GriverContext *ctx, GError **error) {
 	g_return_if_fail (GRIVER_IS_CONTEXT(ctx));
@@ -316,6 +334,6 @@ GObject *g_river_context_new(const char *namespace){
 	GriverContext *ctx = g_object_new(GRIVER_TYPE_CONTEXT, NULL);
 	GriverContextPrivate *priv = g_river_context_get_instance_private(ctx);
 	
-	priv->namespace = namespace;
+	priv->namespace = strdup(namespace);
 	return (GObject *)ctx;
 }
