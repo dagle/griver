@@ -43,7 +43,7 @@ enum {
 
 static guint griver_signals[GRIVER_CONTEXT_LAST_SIGNAL] = { 0 };
 
-GQuark giver_error_quark;
+GQuark griver_error_quark;
 
 /**
  * GMIME_ERROR:
@@ -84,7 +84,7 @@ static void g_river_context_class_init(GriverContextClass *klass){
 	/**
 	 * GriverContext::output-add:
 	 * @runtime: The [class@Griver.GriverContext] instance.
-	 * @output: A newly allocated output
+	 * @out: (transfer full): A newly allocated output
 	 *
 	 **/
 	griver_signals[GRIVER_ADD_OUTPUT] = g_signal_new ("output-add",
@@ -101,7 +101,7 @@ static void g_river_context_class_init(GriverContextClass *klass){
 	/**
 	 * GriverContext::output-remove:
 	 * @runtime: The [class@Griver.GriverContext] instance.
-	 * @output: The output to remove
+	 * @out: The output to remove
 	 *
 	 **/
 	griver_signals[GRIVER_REMOVE_OUTPUT] = g_signal_new ("output-remove",

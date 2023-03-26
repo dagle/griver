@@ -17,7 +17,7 @@ enum {
   GRIVER_OUTPUT_LAST_SIGNAL
 };
 
-static guint griver_output_signals[GRIVER_OUTPUT_LAST_SIGNAL] = { 0 };
+static guint griver_signals[GRIVER_OUTPUT_LAST_SIGNAL] = { 0 };
 
 typedef struct {
 	int cmd_tags;
@@ -51,6 +51,7 @@ static void output_finalize (GObject *object) {
 static void g_river_output_init(GriverOutput *output) {
 }
 
+	//River wants us to arrange views.
 static void g_river_output_class_init(GriverOutputClass *klass)
 {
 	GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
@@ -59,7 +60,7 @@ static void g_river_output_class_init(GriverOutputClass *klass)
 	klass->commit_dimensions = commit_dimensions;
 
 	/**
-	 * GriverContext::layout-demand:
+	 * GriverOutput::layout-demand:
 	 * @out: The [class@Griver.GriverOutput] instance.
 	 * @view_count: Number of views.
 	 * @width: The width of the output.
@@ -70,7 +71,7 @@ static void g_river_output_class_init(GriverOutputClass *klass)
 	 * River wants us to arrange views.
 	 *
 	 **/
-	griver_output_signals[GRIVER_LAYOUT_DEMAND] = g_signal_new ("layout-demand",
+	griver_signals[GRIVER_LAYOUT_DEMAND] = g_signal_new ("layout-demand",
 			G_TYPE_FROM_CLASS (klass),
 			G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
 			0,
@@ -87,7 +88,7 @@ static void g_river_output_class_init(GriverOutputClass *klass)
 			);
 
 	/**
-	 * GriverContext::user-command:
+	 * GriverOutput::user-command:
 	 * @out: The [class@Griver.GriverOutput] instance.
 	 * @command: The command being requested.
 	 * @tags: Tags are effected by the command.
@@ -95,7 +96,7 @@ static void g_river_output_class_init(GriverOutputClass *klass)
 	 * A user ran a command, changing some setting.
 	 *
 	 **/
-	griver_output_signals[GRIVER_USER_COMMAND] = g_signal_new ("user-command",
+	griver_signals[GRIVER_USER_COMMAND] = g_signal_new ("user-command",
 			G_TYPE_FROM_CLASS (klass),
 			G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
 			0,
@@ -185,7 +186,7 @@ static void layout_handle_layout_demand (void *data, struct river_layout_v3 *riv
 {
 	GriverOutput *output = GRIVER_OUTPUT(data);
 
-	g_signal_emit (output, griver_output_signals[GRIVER_LAYOUT_DEMAND], 0,
+	g_signal_emit (output, griver_signals[GRIVER_LAYOUT_DEMAND], 0,
 			view_count, width, height, tags, serial);
 }
 
@@ -195,7 +196,7 @@ static void layout_handle_user_command (void *data,
 	GriverOutput *output = GRIVER_OUTPUT(data);
 	GriverOutputPrivate *priv = g_river_output_get_instance_private(output);
 
-	g_signal_emit (output, griver_output_signals[GRIVER_USER_COMMAND], 0, command, priv->cmd_tags);
+	g_signal_emit (output, griver_signals[GRIVER_USER_COMMAND], 0, command, priv->cmd_tags);
 }
 
 void layout_handle_command_tags(void *data,

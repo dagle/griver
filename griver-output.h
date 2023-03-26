@@ -1,5 +1,5 @@
-#ifndef __GIVER_OUTPUT_H__
-#define __GIVER_OUTPUT_H__
+#ifndef __GRIVER_OUTPUT_H__
+#define __GRIVER_OUTPUT_H__
 
 #include <glib-object.h>
 #include <stdbool.h>
@@ -61,4 +61,4 @@ GObject *g_river_output_new(struct river_layout_manager_v3 *layout_manager,
 
 G_END_DECLS
 
-#endif /* __GIVER_OUTPUT_H__ */
+#endif /* __GRIVER_OUTPUT_H__ */

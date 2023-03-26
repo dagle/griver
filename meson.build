@@ -1,4 +1,5 @@
-project ('misc', 'c')
+project ('griver', 'c',
+  version : '0.1')
 
 source_c = [
   'griver-context.c',
@@ -22,7 +23,8 @@ river_control = wl_mod.scan_xml('protocol/river-control-unstable-v1.xml')
 
 install_headers(source_h)
 
-giver = library('griver', source_c, river_layout, river_status, river_control, dependencies : deps)
+griver = library('griver', source_c, river_layout, river_status, river_control, 
+  dependencies : deps, install: true)
 gnome = import('gnome')
 
 gir_args = [
@@ -31,7 +33,7 @@ gir_args = [
   ]
 
 filter_glib_gir = gnome.generate_gir(
-  giver,
+  griver,
   sources: source_c + source_h,
   namespace: 'Griver',
   nsversion: '0.1',
@@ -40,4 +42,5 @@ filter_glib_gir = gnome.generate_gir(
   dependencies: deps,
   extra_args: gir_args,
   fatal_warnings: true,
+  install: true,
   )

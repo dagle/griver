@@ -1,4 +1,3 @@
--- import lgi
 local lgi = require("lgi")
 local griver = lgi.require("Griver", 0.1)
 
