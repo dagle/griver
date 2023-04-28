@@ -32,7 +32,7 @@ gir_args = [
   '--warn-all',
   ]
 
-filter_glib_gir = gnome.generate_gir(
+griver_glib_gir = gnome.generate_gir(
   griver,
   sources: source_c + source_h,
   namespace: 'Griver',
