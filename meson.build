@@ -25,12 +25,13 @@ install_headers(source_h)
 
 griver = library('griver', source_c, river_layout, river_status, river_control, 
   dependencies : deps, install: true)
-gnome = import('gnome')
 
 gir_args = [
   '--quiet',
   '--warn-all',
   ]
+
+gnome = import('gnome')
 
 griver_glib_gir = gnome.generate_gir(
   griver,

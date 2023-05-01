@@ -12,10 +12,10 @@ G_DECLARE_DERIVABLE_TYPE(GriverContext, g_river_context, GRIVER, CONTEXT, GObjec
 struct _GriverContextClass {
 	GObjectClass parent_class;
 
-	void (*run) (GriverContext *ctx, GError **err);
+	gboolean (*run) (GriverContext *ctx, GError **err);
 };
 
-void g_river_context_run(GriverContext *ctx, GError **err);
+gboolean g_river_context_run(GriverContext *ctx, GError **err);
 
 GObject *g_river_context_new(const char *str);
 

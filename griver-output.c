@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <wayland-client-core.h>
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
@@ -166,25 +167,16 @@ g_river_output_commit_dimensions (GriverOutput *out, const char *layout_name, ui
 
 static void layout_handle_namespace_in_use (void *data, struct river_layout_v3 *river_layout_v3)
 {
-	// This should just try to gracefully crash?
-
-	// struct Output *output = (struct Output *)data;
-	// GriverContextPrivate *priv = g_river_context_get_instance_private (output->ctx);
-
-	// GError *err;
-	// g_set_error(err, G_RIVER_ERROR, G_RIVER_ERROR_NAMESPACE_INUSE,
-	// 		"Namespace already in use");
-	// priv->error = err;
-	// fputs("Namespace already in use.\n", stderr);
-	// priv->loop = false;
-
-	// do a teardown
+	fprintf(stderr, "Namespace already in use");
+	exit(EXIT_FAILURE);
 }
 
 static void layout_handle_layout_demand (void *data, struct river_layout_v3 *river_layout_v3,
 		uint32_t view_count, uint32_t width, uint32_t height, uint32_t tags, uint32_t serial)
 {
+	g_return_if_fail(GRIVER_IS_OUTPUT(data));
 	GriverOutput *output = GRIVER_OUTPUT(data);
+	g_object_ref(output);
 
 	g_signal_emit (output, griver_signals[GRIVER_LAYOUT_DEMAND], 0,
 			view_count, width, height, tags, serial);
@@ -231,7 +223,7 @@ void g_river_output_configure (GriverOutput *out, struct river_layout_manager_v3
 
 		priv->layout = river_layout_manager_v3_get_layout(layout_manager,
 				priv->output, namespace);
-		river_layout_v3_add_listener(priv->layout, &layout_listener, priv->output);
+		river_layout_v3_add_listener(priv->layout, &layout_listener, out);
 	}
 }
 
@@ -270,7 +262,7 @@ void g_river_output_tall_layout(GriverOutput *out, uint32_t view_count, uint32_t
 			usable_width = width - 2 * outer_padding;
 			break;
 		case GRIVER_TOP:
-		case GRIVER_BOT:
+		case GRIVER_BOTTOM:
 			usable_width = height - 2 * outer_padding;
 			break;
 	}
@@ -282,20 +274,20 @@ void g_river_output_tall_layout(GriverOutput *out, uint32_t view_count, uint32_t
 			usable_height = height - 2 * outer_padding;
 			break;
 		case GRIVER_TOP:
-		case GRIVER_BOT:
+		case GRIVER_BOTTOM:
 			usable_height = width - 2 * outer_padding;
 			break;
 	}
 
 	uint32_t main_width, main_height, main_height_rem;
-
 	uint32_t secondary_width, secondary_height, secondary_height_rem;
+
 	if (secondary_count > 0 ) {
 		main_width = (uint32_t) (ratio * usable_width);
 		main_height = usable_height / main_count;
 		main_height_rem = usable_height % main_count;
 
-		secondary_width = (uint32_t) (ratio * usable_width);
+		secondary_width = usable_width - main_width;
 		secondary_height = usable_height / secondary_count;
 		secondary_height_rem = usable_height % secondary_count;
 	} else {
@@ -319,61 +311,61 @@ void g_river_output_tall_layout(GriverOutput *out, uint32_t view_count, uint32_t
 				lheight += main_height_rem;
 			}
 		} else {
-	            x = main_width;
-	            y = (i - main_count) * secondary_height; 
-				if (i > main_count) {
-					y += secondary_height_rem;
-				}
-	            lwidth = secondary_width;
-	            lheight = secondary_height;
-				if (i == main_count) {
-					lheight += secondary_height_rem;
-				}
-	        }
-
-	        x += view_padding;
-	        y += view_padding;
-	        lwidth -= 2 * view_padding;
-	        lheight -= 2 * view_padding;
-
-			switch (rotation) {
-				case GRIVER_LEFT:
-					g_river_output_push_view_dimensions(out,
-							x + outer_padding,
-							y + outer_padding,
-							lwidth,
-							lheight,
-							serial
-							);
-					break;
-				case GRIVER_RIGHT:
-					g_river_output_push_view_dimensions(out,
-							width - lwidth - x + outer_padding,
-							y + outer_padding,
-							lwidth,
-							lheight,
-							serial
-							);
-					break;
-				case GRIVER_TOP:
-					g_river_output_push_view_dimensions(out,
-							y + outer_padding,
-							x + outer_padding,
-							lheight,
-							lwidth,
-							serial
-							);
-					break;
-				case GRIVER_BOT:
-					g_river_output_push_view_dimensions(out,
-							y + outer_padding,
-							width - lwidth - x + outer_padding,
-							lheight,
-							lwidth,
-							serial
-							);
-					break;
+			x = main_width;
+			y = (i - main_count) * secondary_height; 
+			if (i > main_count) {
+				y += secondary_height_rem;
 			}
+			lwidth = secondary_width;
+			lheight = secondary_height;
+			if (i == main_count) {
+				lheight += secondary_height_rem;
+			}
+		}
+
+		x += view_padding;
+		y += view_padding;
+		lwidth -= 2 * view_padding;
+		lheight -= 2 * view_padding;
+
+		switch (rotation) {
+			case GRIVER_LEFT:
+				g_river_output_push_view_dimensions(out,
+						x + outer_padding,
+						y + outer_padding,
+						lwidth,
+						lheight,
+						serial
+						);
+				break;
+			case GRIVER_RIGHT:
+				g_river_output_push_view_dimensions(out,
+						width - lwidth - x + outer_padding,
+						y + outer_padding,
+						lwidth,
+						lheight,
+						serial
+						);
+				break;
+			case GRIVER_TOP:
+				g_river_output_push_view_dimensions(out,
+						y + outer_padding,
+						x + outer_padding,
+						lheight,
+						lwidth,
+						serial
+						);
+				break;
+			case GRIVER_BOTTOM:
+				g_river_output_push_view_dimensions(out,
+						y + outer_padding,
+						usable_width - lwidth - x + outer_padding,
+						lheight,
+						lwidth,
+						serial
+						);
+				break;
+		}
 	}
 }
 
@@ -389,7 +381,8 @@ void g_river_output_tall_layout(GriverOutput *out, uint32_t view_count, uint32_t
  *
  * Returns: (transfer full): a new river context object.
  **/
-GObject *g_river_output_new(struct river_layout_manager_v3 *layout_manager,
+GObject *
+g_river_output_new(struct river_layout_manager_v3 *layout_manager,
 		struct wl_output *wl_output, uint32_t uid,
 		const char *namespace, bool initalized)
 {

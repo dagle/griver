@@ -26,7 +26,7 @@ typedef enum {
 	GRIVER_LEFT,
 	GRIVER_RIGHT,
 	GRIVER_TOP,
-	GRIVER_BOT,
+	GRIVER_BOTTOM,
 } GriverRotation;
 
 struct _GriverOutputClass {
