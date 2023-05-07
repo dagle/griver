@@ -5,7 +5,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "river-layout-v3-client-protocol.h"
-#include "river-status-unstable-v1-client-protocol.h"
 
 G_BEGIN_DECLS
 

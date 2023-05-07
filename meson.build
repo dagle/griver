@@ -18,13 +18,15 @@ deps = [
 
 wl_mod = import('unstable-wayland')
 river_layout = wl_mod.scan_xml('protocol/river-layout-v3.xml')
-river_status = wl_mod.scan_xml('protocol/river-status-unstable-v1.xml')
-river_control = wl_mod.scan_xml('protocol/river-control-unstable-v1.xml')
 
-install_headers(source_h)
+install_headers(source_h, subdir : 'griver')
 
-griver = library('griver', source_c, river_layout, river_status, river_control, 
+griver = library('griver', source_c, river_layout,
   dependencies : deps, install: true)
+
+pkg = import('pkgconfig')
+
+pkg.generate(griver)
 
 gir_args = [
   '--quiet',

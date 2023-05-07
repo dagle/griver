@@ -1,6 +1,6 @@
 #include "griver-context.h"
 #include "griver-output.h"
-#include "glibconfig.h"
+#include "glib.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -9,7 +9,6 @@
 #include <wayland-client-protocol.h>
 
 #include "river-layout-v3-client-protocol.h"
-#include "river-status-unstable-v1-client-protocol.h"
 
 typedef struct {
 	char *namespace;
@@ -294,21 +293,6 @@ static void finish_wayland (GriverContext *ctx)
 
 	wl_registry_destroy(wl_registry);
 	wl_display_disconnect(wl_display);
-}
-
-static void print_ctx(GriverContext *ctx) {
-	GriverContextPrivate *priv = g_river_context_get_instance_private(ctx);
-	printf("ctx: {\n"
-	   "\tnamespace: %s\n"
-	   "\tintialized: %d\n"
-	   "\tloop: %d\n"
-	   "\texitcode: %d\n"
-	   "\terror: %p\n"
-	   "\toutputs: %p\n"
-	   "}\n",
-	   priv->namespace, priv->intialized, priv->loop,
-	   priv->exitcode, priv->error, priv->outputs
-	   );
 }
 
 static gboolean 

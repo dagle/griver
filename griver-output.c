@@ -10,7 +10,6 @@
 #include <wayland-client-protocol.h>
 
 #include "river-layout-v3-client-protocol.h"
-#include "river-status-unstable-v1-client-protocol.h"
 
 enum {
   GRIVER_LAYOUT_DEMAND,
@@ -50,6 +49,15 @@ static void output_finalize (GObject *object) {
 }
 
 static void g_river_output_init(GriverOutput *output) {
+	GriverOutputPrivate *priv = g_river_output_get_instance_private(output);
+	priv->output = NULL;
+	priv->layout = NULL;
+
+	priv->uid = 0;
+	priv->initialized = false;
+	
+	priv->cmd_tags = 0;
+
 }
 
 	//River wants us to arrange views.
