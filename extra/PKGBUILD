@@ -1,0 +1,40 @@
+# Maintainer: Per Odlund <per.odlund@gmail.com>
+
+pkgname=griver-git
+pkgver=r12.8e79fce
+pkgrel=1
+pkgdesc='gobject bindings to river layout'
+arch=('x86_64')
+url="https://github.com/dagle/griver/"
+source=("${pkgname}::git+https://github.com/dagle/griver.git")
+license=('MIT')
+sha512sums=('SKIP')
+depends=(
+	'glib2'
+    'wayland'
+	'river'
+)
+makedepends=(
+    'meson'
+    'wayland-protocols'
+)
+
+pkgver() {
+    cd "$srcdir/$pkgname"
+    if git describe --long --tags >/dev/null 2>&1; then
+        git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+    else
+        printf 'r%s.%s' "$(git rev-list --count HEAD)" "$(git describe --always)"
+    fi
+}
+
+build() {
+    cd "$srcdir/$pkgname"
+	meson setup --buildtype=release --prefix /usr "$srcdir/build"
+	ninja -C "$srcdir/build"
+}
+
+package() {
+    cd "$srcdir/$pkgname"
+    DESTDIR="$pkgdir" meson install -C "$srcdir/build"
+}
