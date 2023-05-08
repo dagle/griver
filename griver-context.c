@@ -141,12 +141,12 @@ static void registry_handle_global (void *data, struct wl_registry *registry,
 	if ( strcmp(interface, river_layout_manager_v3_interface.name) == 0 )
 	{
 		layout_manager = wl_registry_bind(registry, name,
-				&river_layout_manager_v3_interface, 1);
+				&river_layout_manager_v3_interface, 2);
 	}
 	else if ( strcmp(interface, wl_output_interface.name) == 0 )
 	{
 		struct wl_output *wl_output = wl_registry_bind(registry, name,
-				&wl_output_interface, 3);
+				&wl_output_interface, 4);
 
 		GriverOutput *output = create_output(ctx, wl_output, name);
 		g_signal_emit (ctx, griver_signals[GRIVER_ADD_OUTPUT], 0, output);
