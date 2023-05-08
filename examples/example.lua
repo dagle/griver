@@ -1,6 +1,24 @@
 #!/bin/luajit
 local lgi = require("lgi")
 local griver = lgi.require("Griver", 0.1)
+local bit = require("bit")
+
+local function firstSetBit(num)
+  return (bit.band(num, -num)) + 1
+end
+
+local function dump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump(v) .. ','
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
 
 -- bring local copies, for non-jit versions of lua
 local min = math.min
@@ -9,13 +27,25 @@ local max = math.max
 -- Our screens
 local outputs = {}
 
+local function mktags()
+  local tags = {}
+  -- create 9 tags for each output
+  for _ = 1, 9 do
+    local tag = {
+      main_count = 1,
+      main_ratio = 0.6,
+      outer_padding = 0,
+      view_padding = 0,
+      rotation = griver.Rotation.LEFT,
+    }
+    table.insert(tags, tag)
+  end
+  return tags
+end
+
 -- Sets the defaults
 local function reset(o)
-  o.main_count = 1
-  o.main_ratio = 0.6
-  o.outer_padding = 0
-  o.view_padding = 0
-  o.rotation = griver.Rotation.LEFT
+  o.tags = mktags()
 end
 
 local function new_output(output)
@@ -26,42 +56,42 @@ local function new_output(output)
   return o
 end
 
-local function get_output(output)
-  local uid = output:get_uid()
+local function get_output(out)
+  local uid = out:get_uid()
   return outputs[uid]
+end
+
+local function get_tag(out, tags)
+  local output = get_output(out)
+  return output.tags[firstSetBit(tags)]
 end
 
 -- tile using the a pre-defined algorithm
 local function tile(out, view_count, width, height, tags, serial)
-  local output = get_output(out)
-  local rotation = output.rotation
+  local tag = get_tag(out, tags)
+  local rotation = tag.rotation
 
-  out:tall_layout(view_count, width, height, output.main_count, output.view_padding,
-  output.outer_padding, output.main_ratio, rotation, serial)
+  out:tall_layout(view_count, width, height, tag.main_count, tag.view_padding,
+  tag.outer_padding, tag.main_ratio, rotation, serial)
 
   out:commit_dimensions("[]=", serial)
 end
 
 -- Or define your own algorithm
-local function tile_self(out, view_count, width, height, tags, serial)
-  local rotation = griver.Rotation
+local function tile_self(out, view_count, width, height, main_count,
+  view_padding, outer_padding, main_ratio, rotation, serial)
 
   if view_count <= 0 then
     return
   end
 
-  local output = get_output(out)
-
-  local lmain_count = min(output.main_count, view_count)
-	local secondary_count = view_count - lmain_count
-
-  local view_padding = output.view_padding
-  local outer_padding = output.outer_padding
+  local lmain_count = min(main_count, view_count)
+  local secondary_count = view_count - lmain_count
 
   local usable_width
   local usable_height
 
-  if (output.rotation == rotation.LEFT) or (output.rotation == rotation.RIGHT) then
+  if (rotation == rotation.LEFT) or (rotation == rotation.RIGHT) then
     usable_width = width - 2 * outer_padding
     usable_height = height - 2 * outer_padding
   else
@@ -69,13 +99,11 @@ local function tile_self(out, view_count, width, height, tags, serial)
     usable_width = height - 2 * outer_padding
   end
 
-  local main_count = output.main_count
-
-	local main_width, main_height, main_height_rem;
-	local secondary_width, secondary_height, secondary_height_rem;
+  local main_width, main_height, main_height_rem
+  local secondary_width, secondary_height, secondary_height_rem
 
   if secondary_count > 0 then
-    main_width = math.floor(output.main_ratio * usable_width)
+    main_width = math.floor(main_ratio * usable_width)
     main_height = math.floor(usable_height / main_count)
     main_height_rem = usable_height % main_count
 
@@ -120,34 +148,34 @@ local function tile_self(out, view_count, width, height, tags, serial)
     lwidth = lwidth - 2 * view_padding
     lheight = lheight - 2 * view_padding
 
-    if output.rotation == rotation.LEFT then
+    if rotation == rotation.LEFT then
       out:push_view_dimensions(
-        x + outer_padding,
-        y + outer_padding,
-        lwidth,
-        lheight,
-        serial)
-    elseif output.rotation == rotation.RIGHT then
+      x + outer_padding,
+      y + outer_padding,
+      lwidth,
+      lheight,
+      serial)
+    elseif rotation == rotation.RIGHT then
       out:push_view_dimensions(
-        width - lwidth - x + outer_padding,
-        y + outer_padding,
-        lwidth,
-        lheight,
-        serial)
-    elseif output.rotation == rotation.TOP then
+      width - lwidth - x + outer_padding,
+      y + outer_padding,
+      lwidth,
+      lheight,
+      serial)
+    elseif rotation == rotation.TOP then
       out:push_view_dimensions(
-        y + outer_padding,
-        x + outer_padding,
-        lheight,
-        lwidth,
-        serial)
-    elseif output.rotation == rotation.BOTTOM then
+      y + outer_padding,
+      x + outer_padding,
+      lheight,
+      lwidth,
+      serial)
+    elseif rotation == rotation.BOTTOM then
       out:push_view_dimensions(
-        y + outer_padding,
-        usable_width - lwidth - x + outer_padding,
-        lheight,
-        lwidth,
-        serial)
+      y + outer_padding,
+      usable_width - lwidth - x + outer_padding,
+      lheight,
+      lwidth,
+      serial)
     end
   end
   out:commit_dimensions("[]=", serial)
@@ -162,28 +190,50 @@ local function find(command, match)
   return n
 end
 
+local function split(str)
+  local buf = {}
+  for word in str:gmatch("%S+") do
+    table.insert(buf, word)
+  end
+  return buf
+end
+
 local function command(out, cmd, tags)
   local output = get_output(out)
+  local tag = get_tag(out, tags)
 
-  -- This is ugly-ish
-  local n = find(cmd, "main%-count%s+([-+]%d)")
-  if n then
-    output.main_count = output.main_count + tonumber(n)
+  local args = split(cmd)
+
+  if not args[1] then
+    return
   end
 
-  local n = find(cmd, "%s*view%-padding%s+(%d*)")
-  if n then
-    output.view_padding = output.main_count + tonumber(n)
+  if args[1] == "main-count" and args[2] then
+    local num = tonumber(args[2])
+    if num then
+      tag.main_count = tag.main_count + num
+    end
   end
 
-  local n = find(cmd, "%s*outer%-padding%s+(%d*)")
-  if n then
-    output.outer_padding = output.main_count + tonumber(n)
+  if args[1] == "view-padding" and args[2] then
+    local num = tonumber(args[2])
+    if num then
+      tag.view_padding = tag.main_count + num
+    end
   end
 
-  local n = find(cmd, "main%-ratio%s+([-+]?%d+%.%d*)")
-  if n then
-    output.main_ratio = clamp(output.main_ratio + tonumber(n), 0.1, 0.9)
+  if args[1] == "outer-padding" and args[2] then
+    local num = tonumber(args[2])
+    if num then
+      tag.outer_padding = tag.outer_padding + num
+    end
+  end
+
+  if args[1] == "main-ratio" and args[2] then
+    local num = tonumber(args[2])
+    if num then
+      tag.main_ratio = clamp(tag.main_ratio + tonumber(num), 0.1, 0.9)
+    end
   end
 
   local rotation = find(cmd, "main%-location%s+(%a+)")
@@ -192,9 +242,7 @@ local function command(out, cmd, tags)
     output.rotation = griver.Rotation[rotation] or output.rotation
   end
 
-
-  local start, _ = string.find(cmd, "%s*reset%s*")
-  if start then
+  if args[1] == "reset" then
     reset(output)
   end
 end
@@ -206,7 +254,7 @@ ctx.on_output_add = function(_, output)
   outputs[uid] = new_output(output)
 
   -- output.on_layout_demand = tile
-  output.on_layout_demand = tile_self
+  output.on_layout_demand = tile
   output.on_user_command = command
 end
 
