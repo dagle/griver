@@ -19,6 +19,9 @@ gboolean g_river_context_run(GriverContext *ctx, GError **err);
 
 GObject *g_river_context_new(const char *str);
 
+int g_river_first_set_bit_pos(int i);
+int g_river_last_set_bit_pos(int i);
+
 G_END_DECLS
 
 #endif /* __GRIVER_CONTEXT_H__ */

@@ -2,11 +2,13 @@
 #include "griver-output.h"
 #include "glib.h"
 
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <wayland-client-core.h>
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
+#include <math.h>
 
 #include "river-layout-v3-client-protocol.h"
 
@@ -348,7 +350,7 @@ g_river_context_run (GriverContext *ctx, GError **error) {
  *
  * Returns: (transfer full): a new river context object.
  **/
-GObject *g_river_context_new(const char *namespace){
+GObject *g_river_context_new(const char *namespace) {
 	g_return_val_if_fail(namespace, NULL);
 
 	GriverContext *ctx = g_object_new(GRIVER_TYPE_CONTEXT, NULL);
@@ -356,4 +358,34 @@ GObject *g_river_context_new(const char *namespace){
 	
 	priv->namespace = strdup(namespace);
 	return (GObject *)ctx;
+}
+
+/**
+ * g_river_first_set_bit_pos:
+ *
+ * Gets the position of the first bit.
+ *
+ * Returns: Index of position
+ */
+int g_river_first_set_bit_pos(int i) {
+	g_return_val_if_fail(i > 0, 1);
+
+	return log2(i & -i) + 1;
+}
+
+/**
+ * g_river_last_set_bit_pos:
+ *
+ * Gets the position of the last bit.
+ * 
+ * Returns: Index of position
+ */
+int g_river_last_set_bit_pos(int i) {
+	g_return_val_if_fail(i > 0, 1);
+
+	int pos = 0;
+	while (i >> 1) {
+		pos++;
+	}
+	return pos;
 }

@@ -16,13 +16,16 @@ deps = [
   dependency('wayland-client')
 ]
 
+cc = meson.get_compiler('c')
+m_dep = cc.find_library('m', required : true)
+
 wl_mod = import('unstable-wayland')
 river_layout = wl_mod.scan_xml('protocol/river-layout-v3.xml')
 
 install_headers(source_h, subdir : 'griver')
 
 griver = library('griver', source_c, river_layout,
-  dependencies : deps, install: true)
+  dependencies : deps + m_dep, install: true)
 
 pkg = import('pkgconfig')
 

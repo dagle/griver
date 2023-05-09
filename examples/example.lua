@@ -1,11 +1,6 @@
 #!/bin/luajit
 local lgi = require("lgi")
 local griver = lgi.require("Griver", 0.1)
-local bit = require("bit")
-
-local function firstSetBit(num)
-  return (bit.band(num, -num)) + 1
-end
 
 local function dump(o)
    if type(o) == 'table' then
@@ -63,7 +58,7 @@ end
 
 local function get_tag(out, tags)
   local output = get_output(out)
-  return output.tags[firstSetBit(tags)]
+  return output.tags[griver.first_set_bit_pos(tags)]
 end
 
 -- tile using the a pre-defined algorithm
