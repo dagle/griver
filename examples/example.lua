@@ -2,19 +2,6 @@
 local lgi = require("lgi")
 local griver = lgi.require("Griver", 0.1)
 
-local function dump(o)
-   if type(o) == 'table' then
-      local s = '{ '
-      for k,v in pairs(o) do
-         if type(k) ~= 'number' then k = '"'..k..'"' end
-         s = s .. '['..k..'] = ' .. dump(v) .. ','
-      end
-      return s .. '} '
-   else
-      return tostring(o)
-   end
-end
-
 -- bring local copies, for non-jit versions of lua
 local min = math.min
 local max = math.max
