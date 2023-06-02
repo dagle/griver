@@ -256,7 +256,13 @@ static bool init_wayland (GriverContext *ctx)
 
 	wl_registry = wl_display_get_registry(wl_display);
 	wl_registry_add_listener(wl_registry, &registry_listener, ctx);
+
+	if (wl_display_roundtrip(wl_display) <  0) {
+		g_printerr("initial roundtrip failed\n");
+		return false;
+	}
 	priv->intialized = true;
+	
 
 	sync_callback = wl_display_sync(wl_display);
 	wl_callback_add_listener(sync_callback, &sync_callback_listener, ctx);
